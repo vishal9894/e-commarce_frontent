@@ -9,7 +9,7 @@ const HomeLayout = () => {
       <Header />
 
       {/* Page Content */}
-      <main className="flex-1 p-6">
+      <main className="flex-1 ">
         <Outlet />
       </main>
     </div>

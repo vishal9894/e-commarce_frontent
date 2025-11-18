@@ -1,10 +1,14 @@
 import React from "react";
 import { Navigate } from "react-router-dom";
+import { useApi } from "./ApiContext";
 
 const ProtectedRoute = ({ children }) => {
-  const token = localStorage.getItem("token");
+  const { isAuthonticated} = useApi();
 
-  if (!token) {
+  console.log(isAuthonticated , "check conext");
+  
+
+  if (!isAuthonticated) {
     return <Navigate to="/login" replace />;
   }
 

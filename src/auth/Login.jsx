@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { BiUser, BiLock, BiEnvelope, BiShow, BiHide, BiLogoGoogle, BiLogoFacebook } from 'react-icons/bi'
 import loginImage from "../assets/loginimage.jpg"
+import axios from 'axios'
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false)
@@ -16,11 +17,26 @@ const Login = () => {
     })
   }
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    console.log('Login form submitted:', formData)
-    // Add your login logic here
+  const handleSubmit = async (e) => {
+  e.preventDefault()
+  try {
+    const response = await axios.post(`http://localhost:3000/api/user/login`, {
+      email: formData.email,
+      password: formData.password
+    }, {
+      headers: {
+        "Content-Type": "application/json"
+      }
+    })
+    console.log(response.data);
+    localStorage.setItem("token", response.data.token)
+
+    window.location.href = "/" // This will reload the page
+
+  } catch (error) {
+    console.log(error);
   }
+}
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-gray-50 flex items-center justify-center p-4">

@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { BiUser, BiLock, BiEnvelope, BiShow, BiHide } from 'react-icons/bi'
 import signupImage from "../assets/loginimage.jpg"
+import axios from "axios"
 
 const SignupPage = () => {
   const [showPassword, setShowPassword] = useState(false)
@@ -11,6 +12,8 @@ const SignupPage = () => {
     password: ''
   })
 
+ 
+
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -18,11 +21,35 @@ const SignupPage = () => {
     })
   }
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    console.log('Signup form submitted:', formData)
+ const handleSubmit = async (e) => {
+  e.preventDefault();
+  try {
+    const response = await axios.post(
+      `http://localhost:3000/api/user/signup`,
+      {
+        firstname: formData.firstName,
+        lastname: formData.lastName,
+        email: formData.email,
+        password: formData.password
+      },
+      {
+        headers: {
+          "Content-Type": "application/json"
+        }
+      }
+    );
+    
+     window.location.href = "/"
+      localStorage.setItem(response.data.token)
+    // Handle successful response
+    console.log("Signup successful:", response.data);
+    
+    
+  } catch (error) {
+    console.log("Signup error:", error);
+    // Add proper error handling here
   }
-
+};
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-gray-50 flex items-center justify-center p-4">
       <div className="max-w-6xl w-full bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col lg:flex-row">
@@ -34,7 +61,7 @@ const SignupPage = () => {
             className="w-full h-64 lg:h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-blue-800/10"></div>
-          
+
           <div className="absolute bottom-0 left-0 right-0 p-8 text-white bg-gradient-to-t from-black/60 to-transparent">
             <h1 className="text-3xl font-bold mb-2">
               Join <span className="text-blue-300">VishalMart</span>
