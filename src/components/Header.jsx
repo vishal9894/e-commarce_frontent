@@ -1,17 +1,32 @@
-import React from 'react'
-import { 
-    BiMenuAltLeft, 
-    BiSearch, 
-    BiUser, 
-    BiCart, 
-    BiMap, 
-    BiPackage, 
+import React, { useState, useRef, useEffect } from 'react'
+import {
+    BiMenuAltLeft,
+    BiSearch,
+    BiUser,
+    BiCart,
+    BiMap,
+    BiPackage,
     BiTag,
     BiHeart,
     BiChevronDown
 } from 'react-icons/bi'
+import { Link } from 'react-router-dom'
 
 const Header = () => {
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+    const dropdownRef = useRef(null)
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsDropdownOpen(false)
+            }
+        }
+
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside)
+        }
+    }, [])
     return (
         <header className="bg-gradient-to-r from-blue-50 to-gray-50 shadow-sm border-b border-gray-200">
             {/* Top Bar */}
@@ -44,30 +59,33 @@ const Header = () => {
                     {/* Left Section - Logo and Menu */}
                     <div className="flex items-center justify-between w-full lg:w-auto">
                         <div className="flex items-center space-x-2 sm:space-x-3 lg:space-x-4">
-                            <div className="flex items-center space-x-1 sm:space-x-2 text-blue-700 hover:text-blue-800 cursor-pointer transition-colors">
-                                <BiMenuAltLeft className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7" />
-                                <span className="font-bold text-lg sm:text-xl lg:text-2xl bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
-                                    VishalMart
-                                </span>
-                            </div>
+                            <Link to="/">
+                                <div className="flex items-center space-x-1 sm:space-x-2 text-blue-700 hover:text-blue-800 cursor-pointer transition-colors">
+                                    <BiMenuAltLeft className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7" />
+                                    <span className="font-bold text-lg sm:text-xl lg:text-2xl bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+                                        VishalMart
+                                    </span>
+                                </div>
+                            </Link>
                         </div>
-                        
+
                         {/* Mobile Search Toggle - Hidden on desktop */}
                         <div className="lg:hidden flex items-center space-x-3">
                             <BiSearch className="w-5 h-5 text-gray-600" />
-                            <BiCart className="w-5 h-5 text-gray-600 relative">
+                            <div className="relative">
+                                <BiCart className="w-5 h-5 text-gray-600" />
                                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-3 h-3 flex items-center justify-center">
                                     3
                                 </span>
-                            </BiCart>
+                            </div>
                         </div>
                     </div>
 
                     {/* Center Section - Search Bar */}
                     <div className="w-full lg:flex-1 lg:max-w-2xl lg:mx-4 xl:mx-8">
                         <div className="relative">
-                            <input 
-                                type="text" 
+                            <input
+                                type="text"
                                 placeholder="Search for products, brands and more..."
                                 className="w-full px-3 sm:px-4 py-2 sm:py-2 lg:py-3 pl-9 sm:pl-10 lg:pl-12 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent bg-white text-gray-800 placeholder-gray-500 shadow-sm text-xs sm:text-sm lg:text-base"
                             />
@@ -77,12 +95,45 @@ const Header = () => {
 
                     {/* Right Section - User Actions */}
                     <div className="flex items-center justify-between w-full lg:w-auto space-x-2 sm:space-x-3 lg:space-x-4 xl:space-x-6">
-                        {/* Login/Signup - Full text on medium+, icon only on small */}
-                        <button className="flex items-center space-x-1 sm:space-x-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white px-2 sm:px-3 lg:px-4 py-2 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all shadow-sm text-xs sm:text-sm lg:text-base">
-                            <BiUser className="w-4 h-4 sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
-                            <span className="hidden sm:inline">Login</span>
-                            <BiChevronDown className="w-3 h-3 sm:w-3 sm:h-3 lg:w-4 lg:h-4 hidden sm:block" />
-                        </button>
+                        {/* Login/Signup with Dropdown */}
+                        <div className="relative" ref={dropdownRef}>
+                            <button
+                                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                                className="flex group items-center space-x-1 sm:space-x-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white px-2 sm:px-3 lg:px-4 py-2 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all shadow-sm text-xs sm:text-sm lg:text-base"
+                            >
+                                <BiUser className="w-4 h-4 sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
+                                <span className="hidden sm:inline">Login</span>
+                                <BiChevronDown className="w-3 h-3 sm:w-3 sm:h-3 lg:w-4 lg:h-4 hidden sm:block" />
+                            </button>
+
+                            {/* Dropdown Menu */}
+                            {isDropdownOpen && (
+                                <div className="absolute right-0 top-12 w-48 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
+
+                                    <Link to="precnal_info" >
+                                        <button className="w-full flex items-center space-x-2 px-4 py-3 hover:bg-blue-50 transition-colors text-left text-sm text-gray-700">
+                                            <BiUser className="w-4 h-4 text-blue-600" />
+                                            <span>Profile info</span>
+                                        </button>
+                                    </Link>
+                                    <Link to="order_details">
+                                        <button className="w-full flex items-center space-x-2 px-4 py-3 hover:bg-blue-50 transition-colors text-left text-sm text-gray-700">
+                                            <BiPackage className="w-4 h-4 text-blue-600" />
+                                            <span>Delivery/Tracking info</span>
+                                        </button>
+                                    </Link>
+
+                                    <button className="w-full flex items-center space-x-2 px-4 py-3 hover:bg-blue-50 transition-colors text-left text-sm text-gray-700">
+                                        <BiTag className="w-4 h-4 text-blue-600" />
+                                        <span>Setting info</span>
+                                    </button>
+                                    <div className="border-t border-gray-100 my-1"></div>
+                                    <button className="w-full flex items-center space-x-2 px-4 py-3 hover:bg-red-50 transition-colors text-left text-sm text-red-600">
+                                        <span>Logout</span>
+                                    </button>
+                                </div>
+                            )}
+                        </div>
 
                         {/* Wishlist - Text hidden on small screens */}
                         <div className="flex items-center space-x-1 text-gray-700 hover:text-blue-600 cursor-pointer transition-colors">

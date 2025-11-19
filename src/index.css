@@ -1,3 +1,13 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+
+.this-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: gray trasnsparent;
+}
+
+.this-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}

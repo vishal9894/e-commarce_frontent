@@ -15,13 +15,14 @@ const ApiContext = ({ children }) => {
             const response = await axios.get(`${baseUrl}/user/getprofile`, {
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`,
-                } ,
-                withCredentials : true
+                    "Authorization": `Bearer ${token}`,  // ✅ FIXED
+                },
+                withCredentials: true
             });
+
             console.log(response.data, "fetch profile ");
             setIsAuthenticated(true);
-            setUser(response.data.user); 
+            setUser(response.data.user);
 
         } catch (error) {
             console.log(error);
@@ -36,7 +37,7 @@ const ApiContext = ({ children }) => {
 
     const value = {
         isAuthenticated,
-        user 
+        user
     };
 
     return (

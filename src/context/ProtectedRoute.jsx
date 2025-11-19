@@ -3,7 +3,7 @@ import { Navigate } from "react-router-dom";
 import { useApi } from "./ApiContext";
 
 const ProtectedRoute = ({ children }) => {
-  const { isAuthonticated} = useApi();
+  const isAuthonticated = localStorage.getItem("token")
 
   console.log(isAuthonticated , "check conext");
   

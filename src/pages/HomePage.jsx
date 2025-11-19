@@ -190,7 +190,7 @@ const HomePage = () => {
           <div className="w-full justify-center flex py-6">
 
 
-            <div className="flex gap-6 overflow-x-auto scrollbar-hide py-2">
+            <div className="flex gap-6 overflow-x-auto this-scrollbar scrollbar-hide py-2">
               {topcategories.map((item) => (
                 <div
                   key={item.id}
