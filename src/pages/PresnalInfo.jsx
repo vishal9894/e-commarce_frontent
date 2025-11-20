@@ -1,54 +1,36 @@
-import React, { useState } from 'react'
-import { BiEdit, BiUser, BiMap, BiIdCard, BiGift, BiCreditCard, BiWallet, BiPlus, BiTrash } from 'react-icons/bi'
+import React, { useState, useEffect } from 'react'
+import { BiEdit, BiUser, BiMap, BiIdCard, BiGift, BiCreditCard, BiWallet, BiPlus, BiTrash, BiCamera } from 'react-icons/bi'
+import { useApi } from '../context/ApiContext'
+import axios from 'axios'
 
 const PersonalInfo = () => {
     const [activeSection, setActiveSection] = useState('profile')
     const [isEditing, setIsEditing] = useState(false)
     const [isAddingAddress, setIsAddingAddress] = useState(false)
-    
+    const [avatarError, setAvatarError] = useState(false)
+    const [selectedFile, setSelectedFile] = useState(null)
+    const [uploading, setUploading] = useState(false)
+
+    const { user, handleCreateAddress, handleGetAddress, addresses, updateProfile } = useApi();
+
+    // Initialize userData with actual user data from context
     const [userData, setUserData] = useState({
-        firstName: 'Vishal',
-        lastName: 'Kumar',
-        gender: 'Male',
-        email: 'vishalkumar662002@gmail.com',
-        phone: '+917091804766'
+        firstName: '',
+        lastName: '',
+        gender: '',
+        email: '',
+        phone: '',
+        profileAvatar: ""
     })
 
-    const [addresses, setAddresses] = useState([
-        {
-            id: 1,
-            type: 'Home',
-            name: 'Vishal Kumar',
-            phone: '+917091804766',
-            address: '123 Main Street, Apartment 4B',
-            locality: 'Downtown',
-            city: 'Mumbai',
-            state: 'Maharashtra',
-            pincode: '400001',
-            landmark: 'Near Central Park',
-            isDefault: true
-        },
-        {
-            id: 2,
-            type: 'Work',
-            name: 'Vishal Kumar',
-            phone: '+919876543210',
-            address: '456 Business Park, Office No. 12',
-            locality: 'MIDC',
-            city: 'Mumbai',
-            state: 'Maharashtra',
-            pincode: '400093',
-            landmark: 'Opposite Tech Park',
-            isDefault: false
-        }
-    ])
+
 
     const [newAddress, setNewAddress] = useState({
-        type: 'Home',
-        name: '',
-        phone: '',
+        addressType: 'Home',
+        fullName: '',
+        phoneNumber: '',
         address: '',
-        locality: '',
+        location: '',
         city: '',
         state: '',
         pincode: '',
@@ -58,42 +40,108 @@ const PersonalInfo = () => {
 
     const [formData, setFormData] = useState(userData)
 
-    const handleSave = () => {
-        setUserData(formData)
-        setIsEditing(false)
+    // Update userData when user context changes
+    useEffect(() => {
+        if (user) {
+            const updatedUserData = {
+                firstName: user.firstname || user.firstName || user.name?.split(' ')[0] || '',
+                lastName: user.lastname || user.lastName || user.name?.split(' ')[1] || '',
+                gender: user.gender || '',
+                email: user.email || '',
+                phone: user.mobilenumber || user.phone || user.phoneNumber || '',
+                profileAvatar: user.profileAvatar,
+            };
+
+            setUserData(updatedUserData);
+            setFormData(updatedUserData);
+        }
+    }, [user]);
+
+
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                alert('Please select an image file');
+                return;
+            }
+
+            // Validate file size (5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('File size should be less than 5MB');
+                return;
+            }
+
+            setSelectedFile(file);
+            handleAvatarUpload(file);
+        }
+    };
+
+    const handleSave = async () => {
+    try {
+        setUploading(true);
+        
+        const formDataToSend = new FormData();
+        formDataToSend.append('firstname', formData.firstName);
+        formDataToSend.append('lastname', formData.lastName);
+        formDataToSend.append('gender', formData.gender);
+        formDataToSend.append('mobilenumber', formData.phone);
+        
+        // If a new avatar file is selected, append it
+        if (selectedFile) {
+            formDataToSend.append('profileAvatar', selectedFile);
+        }
+
+        // Call the updateProfile function with FormData
+        const result = await updateProfile(formDataToSend);
+
+        if (result) {
+            // Update local state with new data
+            const updatedUserData = {
+                ...userData,
+                firstName: formData.firstName,
+                lastName: formData.lastName,
+                gender: formData.gender,
+                phone: formData.phone,
+                profileAvatar: result.user?.profileAvatar || userData.profileAvatar
+            };
+            
+            setUserData(updatedUserData);
+            setIsEditing(false);
+            setSelectedFile(null); // Reset selected file after save
+        }
+    } catch (error) {
+        console.error('Error updating profile:', error);
+        alert('Failed to update profile. Please try again.');
+    } finally {
+        setUploading(false);
     }
+}
 
     const handleCancel = () => {
-        setFormData(userData)
-        setIsEditing(false)
+        setFormData(userData);
+        setIsEditing(false);
     }
 
     const handleInputChange = (field, value) => {
         setFormData(prev => ({
             ...prev,
             [field]: value
-        }))
+        }));
     }
 
     const handleAddressInputChange = (field, value) => {
         setNewAddress(prev => ({
             ...prev,
             [field]: value
-        }))
+        }));
     }
 
     const handleAddAddress = () => {
-        if (newAddress.isDefault) {
-            // Remove default from other addresses
-            const updatedAddresses = addresses.map(addr => ({
-                ...addr,
-                isDefault: false
-            }))
-            setAddresses([...updatedAddresses, { ...newAddress, id: Date.now() }])
-        } else {
-            setAddresses([...addresses, { ...newAddress, id: Date.now() }])
-        }
-        
+        handleCreateAddress(newAddress);
+
+
         setNewAddress({
             type: 'Home',
             name: '',
@@ -105,24 +153,51 @@ const PersonalInfo = () => {
             pincode: '',
             landmark: '',
             isDefault: false
-        })
-        setIsAddingAddress(false)
+        });
+        setIsAddingAddress(false);
     }
 
     const handleDeleteAddress = (id) => {
-        setAddresses(addresses.filter(addr => addr.id !== id))
+
     }
 
     const setDefaultAddress = (id) => {
         const updatedAddresses = addresses.map(addr => ({
             ...addr,
             isDefault: addr.id === id
-        }))
-        setAddresses(updatedAddresses)
+        }));
+
     }
 
+    // Get user's display name
+    const getUserDisplayName = () => {
+        if (user?.firstname && user?.lastname) {
+            return `${user.firstname} ${user.lastname}`;
+        }
+        if (user?.firstName && user?.lastName) {
+            return `${user.firstName} ${user.lastName}`;
+        }
+        if (user?.name) {
+            return user.name;
+        }
+        return 'User';
+    }
+
+    // Get avatar URL with fallback
+    const getAvatarUrl = () => {
+        if (user?.profileAvatar && !avatarError) {
+            return user.profileAvatar;
+        }
+        return null;
+    }
+
+    useEffect(() => {
+        handleGetAddress()
+    }, [])
+
+
     return (
-        <div className=" bg-gray-50 py-8">
+        <div className="bg-gray-50 py-8">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex flex-col lg:flex-row gap-8">
                     {/* Sidebar */}
@@ -131,7 +206,9 @@ const PersonalInfo = () => {
                             {/* Welcome Section */}
                             <div className="border-b border-gray-200 pb-4 mb-4">
                                 <h1 className="text-lg font-semibold text-gray-900">Hello,</h1>
-                                <h2 className="text-xl font-bold text-gray-900">Vishal Kumar</h2>
+                                <h2 className="text-xl font-bold text-gray-900">
+                                    {getUserDisplayName()}
+                                </h2>
                             </div>
 
                             {/* Navigation */}
@@ -149,31 +226,28 @@ const PersonalInfo = () => {
                                     <div className="space-y-1">
                                         <button
                                             onClick={() => setActiveSection('profile')}
-                                            className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                                                activeSection === 'profile' 
-                                                    ? 'bg-blue-50 text-blue-700 border border-blue-200' 
-                                                    : 'text-gray-700 hover:bg-gray-50'
-                                            }`}
+                                            className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeSection === 'profile'
+                                                ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                                : 'text-gray-700 hover:bg-gray-50'
+                                                }`}
                                         >
                                             Profile Information
                                         </button>
                                         <button
                                             onClick={() => setActiveSection('address')}
-                                            className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                                                activeSection === 'address' 
-                                                    ? 'bg-blue-50 text-blue-700 border border-blue-200' 
-                                                    : 'text-gray-700 hover:bg-gray-50'
-                                            }`}
+                                            className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeSection === 'address'
+                                                ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                                : 'text-gray-700 hover:bg-gray-50'
+                                                }`}
                                         >
                                             Manage Addresses
                                         </button>
                                         <button
                                             onClick={() => setActiveSection('pan')}
-                                            className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                                                activeSection === 'pan' 
-                                                    ? 'bg-blue-50 text-blue-700 border border-blue-200' 
-                                                    : 'text-gray-700 hover:bg-gray-50'
-                                            }`}
+                                            className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeSection === 'pan'
+                                                ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                                : 'text-gray-700 hover:bg-gray-50'
+                                                }`}
                                         >
                                             PAN Card Information
                                         </button>
@@ -220,13 +294,15 @@ const PersonalInfo = () => {
                                             <div className="flex space-x-2">
                                                 <button
                                                     onClick={handleSave}
-                                                    className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
+                                                    disabled={uploading}
+                                                    className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
                                                 >
-                                                    Save
+                                                    {uploading ? 'Saving...' : 'Save'}
                                                 </button>
                                                 <button
                                                     onClick={handleCancel}
-                                                    className="px-3 py-1 bg-gray-500 text-white text-sm rounded hover:bg-gray-600 transition-colors"
+                                                    disabled={uploading}
+                                                    className="px-3 py-1 bg-gray-500 text-white text-sm rounded hover:bg-gray-600 transition-colors disabled:opacity-50"
                                                 >
                                                     Cancel
                                                 </button>
@@ -237,12 +313,39 @@ const PersonalInfo = () => {
 
                                 {/* Personal Information Form */}
                                 <div className="p-6 space-y-6">
-                                    {/* Name Section */}
-                                    <div className="flex flex-col md:flex-row gap-6">
+                                    {/* Avatar Section */}
+                                    <form className="flex flex-col md:flex-row gap-6">
                                         <div className="flex-1">
                                             <div className="flex items-center space-x-3 mb-4">
-                                                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                                                    <BiUser className="w-6 h-6 text-blue-600" />
+                                                <div className="relative">
+                                                    <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center overflow-hidden border-2 border-gray-300">
+                                                        {getAvatarUrl() ? (
+                                                            <img
+                                                                src={getAvatarUrl()}
+                                                                alt="Profile"
+                                                                className="w-full h-full object-cover"
+                                                                onError={() => setAvatarError(true)}
+                                                            />
+                                                        ) : (
+                                                            <BiUser className="w-8 h-8 text-blue-600" />
+                                                        )}
+                                                    </div>
+                                                    <label htmlFor="avatar-upload" className="absolute bottom-0 right-0 bg-blue-600 text-white p-1 rounded-full cursor-pointer hover:bg-blue-700 transition-colors">
+                                                        <BiCamera className="w-4 h-4" />
+                                                        <input
+                                                            id="avatar-upload"
+                                                            type="file"
+                                                            accept="image/*"
+                                                            onChange={handleFileChange}
+                                                            className="hidden"
+                                                            disabled={uploading}
+                                                        />
+                                                    </label>
+                                                    {uploading && (
+                                                        <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
+                                                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 <div>
                                                     {isEditing ? (
@@ -256,6 +359,7 @@ const PersonalInfo = () => {
                                                                     value={formData.firstName}
                                                                     onChange={(e) => handleInputChange('firstName', e.target.value)}
                                                                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                                                    disabled={uploading}
                                                                 />
                                                             </div>
                                                             <div>
@@ -267,6 +371,7 @@ const PersonalInfo = () => {
                                                                     value={formData.lastName}
                                                                     onChange={(e) => handleInputChange('lastName', e.target.value)}
                                                                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                                                    disabled={uploading}
                                                                 />
                                                             </div>
                                                         </div>
@@ -275,12 +380,13 @@ const PersonalInfo = () => {
                                                             <h3 className="text-xl font-bold text-gray-900">
                                                                 {userData.firstName} {userData.lastName}
                                                             </h3>
+                                                            <p className="text-gray-600">{userData.email}</p>
                                                         </>
                                                     )}
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
+                                    </form>
 
                                     {/* Gender Section */}
                                     <div className="border-t border-gray-200 pt-6">
@@ -295,6 +401,7 @@ const PersonalInfo = () => {
                                                         checked={formData.gender === 'Male'}
                                                         onChange={(e) => handleInputChange('gender', e.target.value)}
                                                         className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                                                        disabled={uploading}
                                                     />
                                                     <span className="text-gray-700">Male</span>
                                                 </label>
@@ -306,12 +413,13 @@ const PersonalInfo = () => {
                                                         checked={formData.gender === 'Female'}
                                                         onChange={(e) => handleInputChange('gender', e.target.value)}
                                                         className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                                                        disabled={uploading}
                                                     />
                                                     <span className="text-gray-700">Female</span>
                                                 </label>
                                             </div>
                                         ) : (
-                                            <p className="text-gray-700">{userData.gender}</p>
+                                            <p className="text-gray-700">{userData.gender || 'Not specified'}</p>
                                         )}
                                     </div>
 
@@ -319,33 +427,14 @@ const PersonalInfo = () => {
                                     <div className="border-t border-gray-200 pt-6">
                                         <div className="flex items-center justify-between mb-4">
                                             <h3 className="text-sm font-semibold text-gray-900">Email Address</h3>
-                                            {!isEditing && (
-                                                <button className="text-blue-600 hover:text-blue-700 font-medium text-sm">
-                                                    Edit
-                                                </button>
-                                            )}
                                         </div>
-                                        {isEditing ? (
-                                            <input
-                                                type="email"
-                                                value={formData.email}
-                                                onChange={(e) => handleInputChange('email', e.target.value)}
-                                                className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                                            />
-                                        ) : (
-                                            <p className="text-gray-700">{userData.email}</p>
-                                        )}
+                                        <p className="text-gray-700">{userData.email}</p>
                                     </div>
 
                                     {/* Phone Section */}
                                     <div className="border-t border-gray-200 pt-6">
                                         <div className="flex items-center justify-between mb-4">
                                             <h3 className="text-sm font-semibold text-gray-900">Mobile Number</h3>
-                                            {!isEditing && (
-                                                <button className="text-blue-600 hover:text-blue-700 font-medium text-sm">
-                                                    Edit
-                                                </button>
-                                            )}
                                         </div>
                                         {isEditing ? (
                                             <input
@@ -353,15 +442,17 @@ const PersonalInfo = () => {
                                                 value={formData.phone}
                                                 onChange={(e) => handleInputChange('phone', e.target.value)}
                                                 className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                                disabled={uploading}
                                             />
                                         ) : (
-                                            <p className="text-gray-700">{userData.phone}</p>
+                                            <p className="text-gray-700">{userData.phone || 'Not provided'}</p>
                                         )}
                                     </div>
                                 </div>
                             </div>
                         )}
 
+                        {/* Rest of your code for address and pan sections remains the same */}
                         {activeSection === 'address' && (
                             <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                                 {/* Header */}
@@ -418,7 +509,7 @@ const PersonalInfo = () => {
                                                         onChange={(e) => handleAddressInputChange('type', e.target.value)}
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                                                     >
-                                                        <option value="Home">Home</option>
+                                                        <option defaultChecked value="Home">Home</option>
                                                         <option value="Work">Work</option>
                                                         <option value="Other">Other</option>
                                                     </select>
@@ -500,12 +591,12 @@ const PersonalInfo = () => {
                                     {/* Address List */}
                                     <div className="space-y-4">
                                         {addresses.map((address) => (
-                                            <div key={address.id} className="border border-gray-200 rounded-lg p-4">
+                                            <div key={address._id} className="border border-gray-200 rounded-lg p-4">
                                                 <div className="flex items-start justify-between">
                                                     <div className="flex-1">
                                                         <div className="flex items-center space-x-3 mb-2">
                                                             <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded">
-                                                                {address.type}
+                                                                {address.addressType}
                                                             </span>
                                                             {address.isDefault && (
                                                                 <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded">
@@ -513,8 +604,8 @@ const PersonalInfo = () => {
                                                                 </span>
                                                             )}
                                                         </div>
-                                                        <p className="font-medium text-gray-900">{address.name}</p>
-                                                        <p className="text-gray-600">{address.phone}</p>
+                                                        <p className="font-medium text-gray-900">{address.address}</p>
+                                                        <p className="text-gray-600">{address.phoneNumber}</p>
                                                         <p className="text-gray-600 mt-1">{address.address}</p>
                                                         <p className="text-gray-600">
                                                             {address.locality}, {address.city}, {address.state} - {address.pincode}
@@ -548,6 +639,7 @@ const PersonalInfo = () => {
                         )}
 
                         {activeSection === 'pan' && (
+                            // ... your existing pan section code
                             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                                 <h2 className="text-lg font-semibold text-gray-900 mb-4">PAN Card Information</h2>
                                 <p className="text-gray-600">PAN card management section coming soon...</p>

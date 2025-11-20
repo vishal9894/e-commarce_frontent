@@ -4,8 +4,6 @@ import { useApi } from "./ApiContext";
 
 const ProtectedRoute = ({ children }) => {
   const isAuthonticated = localStorage.getItem("token")
-
-  console.log(isAuthonticated , "check conext");
   
 
   if (!isAuthonticated) {

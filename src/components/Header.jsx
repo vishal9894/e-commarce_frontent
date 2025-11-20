@@ -11,9 +11,11 @@ import {
     BiChevronDown
 } from 'react-icons/bi'
 import { Link } from 'react-router-dom'
+import { useApi } from '../context/ApiContext'
 
 const Header = () => {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+    const {handleLogout ,activeAddress ,user} = useApi();
     const dropdownRef = useRef(null)
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -27,6 +29,9 @@ const Header = () => {
             document.removeEventListener('mousedown', handleClickOutside)
         }
     }, [])
+
+    console.log(activeAddress);
+    
     return (
         <header className="bg-gradient-to-r from-blue-50 to-gray-50 shadow-sm border-b border-gray-200">
             {/* Top Bar */}
@@ -39,7 +44,7 @@ const Header = () => {
                     <div className="flex items-center space-x-3 sm:space-x-4 lg:space-x-6">
                         <div className="flex items-center space-x-1 hover:text-blue-600 cursor-pointer transition-colors">
                             <BiMap className="w-3 h-3 sm:w-4 sm:h-4" />
-                            <span className="text-xs sm:text-sm">Delivery to 404040</span>
+                            <span className="text-xs sm:text-sm">Delivery to {activeAddress?.address}</span>
                         </div>
                         <div className="flex items-center space-x-1 hover:text-blue-600 cursor-pointer transition-colors">
                             <BiPackage className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -102,7 +107,7 @@ const Header = () => {
                                 className="flex group items-center space-x-1 sm:space-x-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white px-2 sm:px-3 lg:px-4 py-2 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all shadow-sm text-xs sm:text-sm lg:text-base"
                             >
                                 <BiUser className="w-4 h-4 sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
-                                <span className="hidden sm:inline">Login</span>
+                                <span className="hidden sm:inline"> {user?.firstname ? user?.firstname : "Login"}  </span>
                                 <BiChevronDown className="w-3 h-3 sm:w-3 sm:h-3 lg:w-4 lg:h-4 hidden sm:block" />
                             </button>
 
@@ -128,7 +133,7 @@ const Header = () => {
                                         <span>Setting info</span>
                                     </button>
                                     <div className="border-t border-gray-100 my-1"></div>
-                                    <button className="w-full flex items-center space-x-2 px-4 py-3 hover:bg-red-50 transition-colors text-left text-sm text-red-600">
+                                    <button onClick={ handleLogout} className="w-full flex items-center space-x-2 px-4 py-3 hover:bg-red-50 transition-colors text-left text-sm text-red-600">
                                         <span>Logout</span>
                                     </button>
                                 </div>

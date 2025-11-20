@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { BiUser, BiLock, BiEnvelope, BiShow, BiHide, BiLogoGoogle, BiLogoFacebook } from 'react-icons/bi'
 import loginImage from "../assets/loginimage.jpg"
 import axios from 'axios'
+import { useApi } from '../context/ApiContext'
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false)
@@ -9,6 +10,8 @@ const Login = () => {
     email: '',
     password: ''
   })
+
+  const {fetchProfile} = useApi();
 
   const handleChange = (e) => {
     setFormData({
@@ -30,6 +33,7 @@ const Login = () => {
     })
     console.log(response.data);
     localStorage.setItem("token", response.data.token)
+    fetchProfile();
 
     window.location.href = "/" // This will reload the page
 

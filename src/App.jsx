@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import HomeLayout from "./Layout/HomeLayout";
 import HomePage from "./pages/HomePage";
 import Login from "./auth/Login";
@@ -19,7 +19,8 @@ const App = () => {
           </ProtectedRoute>
         }
       >
-        <Route index element={<HomePage />} />
+        <Route index element={<Navigate to="/home" replace />} />
+        <Route path="/home" element={<HomePage />} />
         <Route path="/precnal_info" element={<PersonalInfo />} />
         <Route path="/order_details" element={<OrderedProduct />} />
       </Route>
