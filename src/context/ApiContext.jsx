@@ -10,7 +10,8 @@ const ApiContext = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(false);
     const [addresses, setAddresses] = useState([]);
-    const [activeAddress , setActiveAddress] = useState([])
+    const [activeAddress, setActiveAddress] = useState([])
+    const [phones , setPhones] = useState([]);
 
     const fetchProfile = async () => {
         try {
@@ -37,24 +38,24 @@ const ApiContext = ({ children }) => {
     };
 
     const updateProfile = async (formData) => {
-    const token = localStorage.getItem("token");
-    try {
-        const response = await axios.put(`${baseUrl}/user/update/${user._id}`, formData, {
-            headers: {
-                "Content-Type": "multipart/form-data", 
-                "Authorization": `Bearer ${token}`
-            },
-            withCredentials: true
-        });
-        
-        console.log(response.data);
-        return response.data; // Return the response data
-        
-    } catch (error) {
-        console.log(error);
-        throw error; // Throw error to handle in component
+        const token = localStorage.getItem("token");
+        try {
+            const response = await axios.put(`${baseUrl}/user/update/${user._id}`, formData, {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                    "Authorization": `Bearer ${token}`
+                },
+                withCredentials: true
+            });
+
+            console.log(response.data);
+            return response.data; // Return the response data
+
+        } catch (error) {
+            console.log(error);
+            throw error; // Throw error to handle in component
+        }
     }
-}
 
     const handleCreateAddress = async (newAddress) => {
         try {
@@ -90,6 +91,7 @@ const ApiContext = ({ children }) => {
 
             // Refresh user data to get updated addresses
             await handleGetAddress();
+            await handleActiveAddress();
 
             return response.data;
 
@@ -119,11 +121,13 @@ const ApiContext = ({ children }) => {
         }
     }
 
-    const handleActiveAddress = async () =>{
-         const token = localStorage.getItem("token");
-        try{
-            const response = await axios.get(`${baseUrl}/user/get-active-address`,{
-                  headers: {
+
+
+    const handleActiveAddress = async () => {
+        const token = localStorage.getItem("token");
+        try {
+            const response = await axios.get(`${baseUrl}/user/get-active-address`, {
+                headers: {
                     "Content-Type": "application/json",
                     "Authorization": `Bearer ${token}`,
                 },
@@ -131,10 +135,53 @@ const ApiContext = ({ children }) => {
             })
             setActiveAddress(response.data.activeAddress)
             console.log(response.data);
-            
-        }catch(error){
+
+        } catch (error) {
             console.log(error);
-            
+
+        }
+    }
+
+    const handleDeleteAddress = async (paramID) => {
+        const token = localStorage.getItem("token");
+        
+
+        try {
+            const response = await axios.delete(`${baseUrl}/user/delete-address/${paramID}`, {
+                headers: {
+                    "Content-Type": "applicaiton/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                withCredentials: true
+            })
+            await handleGetAddress();
+            console.log(response.data);
+
+        } catch (error) {
+            console.log(error);
+
+        }
+    }
+
+
+    // porducts
+
+    const handleFetchProducts = async () => {
+        const token = localStorage.getItem("token");
+        try {
+            const response = await axios.get(`${baseUrl}/porduct/get-product`, {
+                headers: {
+                    "Content-Type": "applicaiton/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                withCredentials: true
+            })
+            console.log(response.data , "fethc porducts");
+            setPhones(response.data.product)
+
+        } catch (error) {
+            console.log(error);
+
         }
     }
 
@@ -142,12 +189,12 @@ const ApiContext = ({ children }) => {
 
 
 
-
     useEffect(() => {
-       
-            fetchProfile();
-            handleActiveAddress();
-       
+
+        fetchProfile();
+        handleActiveAddress();
+        handleFetchProducts();
+
     }, []);
 
     const handleLogout = async () => {
@@ -161,11 +208,13 @@ const ApiContext = ({ children }) => {
         isAuthenticated,
         user,
         handleLogout,
-updateProfile ,
+        updateProfile,
         handleCreateAddress,
         handleGetAddress,
         loading,
-        addresses ,activeAddress
+        addresses, activeAddress,
+        handleDeleteAddress,
+        phones
     };
 
     return (

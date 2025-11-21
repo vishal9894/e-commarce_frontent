@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { BiEdit, BiUser, BiMap, BiIdCard, BiGift, BiCreditCard, BiWallet, BiPlus, BiTrash, BiCamera } from 'react-icons/bi'
 import { useApi } from '../context/ApiContext'
-import axios from 'axios'
+
+const baseUrl = import.meta.env.VITE_API_BASE_URL;
 
 const PersonalInfo = () => {
     const [activeSection, setActiveSection] = useState('profile')
@@ -11,7 +12,7 @@ const PersonalInfo = () => {
     const [selectedFile, setSelectedFile] = useState(null)
     const [uploading, setUploading] = useState(false)
 
-    const { user, handleCreateAddress, handleGetAddress, addresses, updateProfile } = useApi();
+    const { user, handleCreateAddress, handleGetAddress, addresses, updateProfile, handleDeleteAddress } = useApi();
 
     // Initialize userData with actual user data from context
     const [userData, setUserData] = useState({
@@ -22,8 +23,6 @@ const PersonalInfo = () => {
         phone: '',
         profileAvatar: ""
     })
-
-
 
     const [newAddress, setNewAddress] = useState({
         addressType: 'Home',
@@ -57,6 +56,25 @@ const PersonalInfo = () => {
         }
     }, [user]);
 
+    // Get avatar URL with fallback - FIXED VERSION
+    const getAvatarUrl = () => {
+        if (user?.profileAvatar && !avatarError) {
+            // Check if it's a full URL or relative path
+            if (user.profileAvatar.startsWith('http')) {
+                return user.profileAvatar;
+            } else {
+                // If it's a relative path, construct the full URL
+                // Remove leading slash if present to avoid double slashes
+                const cleanPath = user.profileAvatar.startsWith('/') 
+                    ? user.profileAvatar.substring(1) 
+                    : user.profileAvatar;
+                return `${baseUrl}/${cleanPath}`;
+            }
+        }
+        return null;
+    };
+
+    
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
@@ -74,54 +92,55 @@ const PersonalInfo = () => {
             }
 
             setSelectedFile(file);
-            handleAvatarUpload(file);
         }
     };
 
     const handleSave = async () => {
-    try {
-        setUploading(true);
-        
-        const formDataToSend = new FormData();
-        formDataToSend.append('firstname', formData.firstName);
-        formDataToSend.append('lastname', formData.lastName);
-        formDataToSend.append('gender', formData.gender);
-        formDataToSend.append('mobilenumber', formData.phone);
-        
-        // If a new avatar file is selected, append it
-        if (selectedFile) {
-            formDataToSend.append('profileAvatar', selectedFile);
-        }
+        try {
+            setUploading(true);
 
-        // Call the updateProfile function with FormData
-        const result = await updateProfile(formDataToSend);
+            const formDataToSend = new FormData();
+            formDataToSend.append('firstname', formData.firstName);
+            formDataToSend.append('lastname', formData.lastName);
+            formDataToSend.append('gender', formData.gender);
+            formDataToSend.append('mobilenumber', formData.phone);
 
-        if (result) {
-            // Update local state with new data
-            const updatedUserData = {
-                ...userData,
-                firstName: formData.firstName,
-                lastName: formData.lastName,
-                gender: formData.gender,
-                phone: formData.phone,
-                profileAvatar: result.user?.profileAvatar || userData.profileAvatar
-            };
-            
-            setUserData(updatedUserData);
-            setIsEditing(false);
-            setSelectedFile(null); // Reset selected file after save
+            // If a new avatar file is selected, append it
+            if (selectedFile) {
+                formDataToSend.append('profileAvatar', selectedFile);
+            }
+
+            // Call the updateProfile function with FormData
+            const result = await updateProfile(formDataToSend);
+
+            if (result) {
+                // Update local state with new data
+                const updatedUserData = {
+                    ...userData,
+                    firstName: formData.firstName,
+                    lastName: formData.lastName,
+                    gender: formData.gender,
+                    phone: formData.phone,
+                    profileAvatar: result.user?.profileAvatar || userData.profileAvatar
+                };
+
+                setUserData(updatedUserData);
+                setIsEditing(false);
+                setSelectedFile(null); // Reset selected file after save
+                setAvatarError(false); // Reset avatar error on successful update
+            }
+        } catch (error) {
+            console.error('Error updating profile:', error);
+            alert('Failed to update profile. Please try again.');
+        } finally {
+            setUploading(false);
         }
-    } catch (error) {
-        console.error('Error updating profile:', error);
-        alert('Failed to update profile. Please try again.');
-    } finally {
-        setUploading(false);
     }
-}
 
     const handleCancel = () => {
         setFormData(userData);
         setIsEditing(false);
+        setSelectedFile(null);
     }
 
     const handleInputChange = (field, value) => {
@@ -138,35 +157,48 @@ const PersonalInfo = () => {
         }));
     }
 
-    const handleAddAddress = () => {
-        handleCreateAddress(newAddress);
-
-
-        setNewAddress({
-            type: 'Home',
-            name: '',
-            phone: '',
-            address: '',
-            locality: '',
-            city: '',
-            state: '',
-            pincode: '',
-            landmark: '',
-            isDefault: false
-        });
-        setIsAddingAddress(false);
+    const handleAddAddress = async () => {
+        try {
+            await handleCreateAddress(newAddress);
+            // Refresh addresses list
+            await handleGetAddress();
+            
+            setNewAddress({
+                addressType: 'Home',
+                fullName: '',
+                phoneNumber: '',
+                address: '',
+                location: '',
+                city: '',
+                state: '',
+                pincode: '',
+                landmark: '',
+                isDefault: false
+            });
+            setIsAddingAddress(false);
+        } catch (error) {
+            console.error('Error adding address:', error);
+            alert('Failed to add address. Please try again.');
+        }
     }
 
-    const handleDeleteAddress = (id) => {
-
+    const clickhandleDeleteAddress = async (addressId) => {
+        if (window.confirm('Are you sure you want to delete this address?')) {
+            try {
+                await handleDeleteAddress(addressId);
+                // Refresh addresses after deletion
+                await handleGetAddress();
+            } catch (error) {
+                console.error('Error deleting address:', error);
+                alert('Failed to delete address. Please try again.');
+            }
+        }
     }
 
     const setDefaultAddress = (id) => {
-        const updatedAddresses = addresses.map(addr => ({
-            ...addr,
-            isDefault: addr.id === id
-        }));
-
+        // This would typically call an API to set default address
+        console.log('Setting default address:', id);
+        // Implement your set default address logic here
     }
 
     // Get user's display name
@@ -183,18 +215,9 @@ const PersonalInfo = () => {
         return 'User';
     }
 
-    // Get avatar URL with fallback
-    const getAvatarUrl = () => {
-        if (user?.profileAvatar && !avatarError) {
-            return user.profileAvatar;
-        }
-        return null;
-    }
-
     useEffect(() => {
         handleGetAddress()
     }, [])
-
 
     return (
         <div className="bg-gray-50 py-8">
@@ -314,7 +337,7 @@ const PersonalInfo = () => {
                                 {/* Personal Information Form */}
                                 <div className="p-6 space-y-6">
                                     {/* Avatar Section */}
-                                    <form className="flex flex-col md:flex-row gap-6">
+                                    <div className="flex flex-col md:flex-row gap-6">
                                         <div className="flex-1">
                                             <div className="flex items-center space-x-3 mb-4">
                                                 <div className="relative">
@@ -338,7 +361,7 @@ const PersonalInfo = () => {
                                                             accept="image/*"
                                                             onChange={handleFileChange}
                                                             className="hidden"
-                                                            disabled={uploading}
+                                                            disabled={uploading || isEditing}
                                                         />
                                                     </label>
                                                     {uploading && (
@@ -386,7 +409,7 @@ const PersonalInfo = () => {
                                                 </div>
                                             </div>
                                         </div>
-                                    </form>
+                                    </div>
 
                                     {/* Gender Section */}
                                     <div className="border-t border-gray-200 pt-6">
@@ -452,7 +475,6 @@ const PersonalInfo = () => {
                             </div>
                         )}
 
-                        {/* Rest of your code for address and pan sections remains the same */}
                         {activeSection === 'address' && (
                             <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                                 {/* Header */}
@@ -479,18 +501,20 @@ const PersonalInfo = () => {
                                                     <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
                                                     <input
                                                         type="text"
-                                                        value={newAddress.name}
-                                                        onChange={(e) => handleAddressInputChange('name', e.target.value)}
+                                                        value={newAddress.fullName}
+                                                        onChange={(e) => handleAddressInputChange('fullName', e.target.value)}
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                                        placeholder="Enter full name"
                                                     />
                                                 </div>
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
                                                     <input
                                                         type="tel"
-                                                        value={newAddress.phone}
-                                                        onChange={(e) => handleAddressInputChange('phone', e.target.value)}
+                                                        value={newAddress.phoneNumber}
+                                                        onChange={(e) => handleAddressInputChange('phoneNumber', e.target.value)}
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                                        placeholder="Enter phone number"
                                                     />
                                                 </div>
                                                 <div>
@@ -500,16 +524,17 @@ const PersonalInfo = () => {
                                                         value={newAddress.pincode}
                                                         onChange={(e) => handleAddressInputChange('pincode', e.target.value)}
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                                        placeholder="Enter pincode"
                                                     />
                                                 </div>
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 mb-1">Address Type</label>
                                                     <select
-                                                        value={newAddress.type}
-                                                        onChange={(e) => handleAddressInputChange('type', e.target.value)}
+                                                        value={newAddress.addressType}
+                                                        onChange={(e) => handleAddressInputChange('addressType', e.target.value)}
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                                                     >
-                                                        <option defaultChecked value="Home">Home</option>
+                                                        <option value="Home">Home</option>
                                                         <option value="Work">Work</option>
                                                         <option value="Other">Other</option>
                                                     </select>
@@ -521,15 +546,7 @@ const PersonalInfo = () => {
                                                         onChange={(e) => handleAddressInputChange('address', e.target.value)}
                                                         rows="3"
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 resize-none"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Locality/Area</label>
-                                                    <input
-                                                        type="text"
-                                                        value={newAddress.locality}
-                                                        onChange={(e) => handleAddressInputChange('locality', e.target.value)}
-                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                                        placeholder="Enter complete address"
                                                     />
                                                 </div>
                                                 <div>
@@ -539,6 +556,7 @@ const PersonalInfo = () => {
                                                         value={newAddress.city}
                                                         onChange={(e) => handleAddressInputChange('city', e.target.value)}
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                                        placeholder="Enter city"
                                                     />
                                                 </div>
                                                 <div>
@@ -548,6 +566,7 @@ const PersonalInfo = () => {
                                                         value={newAddress.state}
                                                         onChange={(e) => handleAddressInputChange('state', e.target.value)}
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                                        placeholder="Enter state"
                                                     />
                                                 </div>
                                                 <div>
@@ -557,6 +576,7 @@ const PersonalInfo = () => {
                                                         value={newAddress.landmark}
                                                         onChange={(e) => handleAddressInputChange('landmark', e.target.value)}
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                                        placeholder="Enter landmark (optional)"
                                                     />
                                                 </div>
                                                 <div className="md:col-span-2">
@@ -590,56 +610,63 @@ const PersonalInfo = () => {
 
                                     {/* Address List */}
                                     <div className="space-y-4">
-                                        {addresses.map((address) => (
-                                            <div key={address._id} className="border border-gray-200 rounded-lg p-4">
-                                                <div className="flex items-start justify-between">
-                                                    <div className="flex-1">
-                                                        <div className="flex items-center space-x-3 mb-2">
-                                                            <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded">
-                                                                {address.addressType}
-                                                            </span>
-                                                            {address.isDefault && (
-                                                                <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded">
-                                                                    DEFAULT
+                                        {addresses && addresses.length > 0 ? (
+                                            addresses.map((address) => (
+                                                <div key={address._id} className="border border-gray-200 rounded-lg p-4">
+                                                    <div className="flex items-start justify-between">
+                                                        <div className="flex-1">
+                                                            <div className="flex items-center space-x-3 mb-2">
+                                                                <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded">
+                                                                    {address.addressType}
                                                                 </span>
+                                                                {address.isDefault && (
+                                                                    <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded">
+                                                                        DEFAULT
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <p className="font-medium text-gray-900">{address.fullName}</p>
+                                                            <p className="text-gray-600">{address.phoneNumber}</p>
+                                                            <p className="text-gray-600 mt-1">{address.address}</p>
+                                                            <p className="text-gray-600">
+                                                                {address.city}, {address.state} - {address.pincode}
+                                                            </p>
+                                                            {address.landmark && (
+                                                                <p className="text-gray-600">Landmark: {address.landmark}</p>
                                                             )}
                                                         </div>
-                                                        <p className="font-medium text-gray-900">{address.address}</p>
-                                                        <p className="text-gray-600">{address.phoneNumber}</p>
-                                                        <p className="text-gray-600 mt-1">{address.address}</p>
-                                                        <p className="text-gray-600">
-                                                            {address.locality}, {address.city}, {address.state} - {address.pincode}
-                                                        </p>
-                                                        {address.landmark && (
-                                                            <p className="text-gray-600">Landmark: {address.landmark}</p>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex space-x-2">
-                                                        {!address.isDefault && (
+                                                        <div className="flex space-x-2">
+                                                            {!address.isDefault && (
+                                                                <button
+                                                                    onClick={() => setDefaultAddress(address._id)}
+                                                                    className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                                                                >
+                                                                    Set as Default
+                                                                </button>
+                                                            )}
                                                             <button
-                                                                onClick={() => setDefaultAddress(address.id)}
-                                                                className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                                                                onClick={() => clickhandleDeleteAddress(address._id)}
+                                                                className="text-red-600 hover:text-red-700 p-1"
+                                                                title="Delete address"
                                                             >
-                                                                Set as Default
+                                                                <BiTrash className="w-4 h-4" />
                                                             </button>
-                                                        )}
-                                                        <button
-                                                            onClick={() => handleDeleteAddress(address.id)}
-                                                            className="text-red-600 hover:text-red-700"
-                                                        >
-                                                            <BiTrash className="w-4 h-4" />
-                                                        </button>
+                                                        </div>
                                                     </div>
                                                 </div>
+                                            ))
+                                        ) : (
+                                            <div className="text-center py-8">
+                                                <BiMap className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                                                <p className="text-gray-500">No addresses found. Add your first address!</p>
                                             </div>
-                                        ))}
+                                        )}
                                     </div>
                                 </div>
                             </div>
                         )}
 
                         {activeSection === 'pan' && (
-                            // ... your existing pan section code
                             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                                 <h2 className="text-lg font-semibold text-gray-900 mb-4">PAN Card Information</h2>
                                 <p className="text-gray-600">PAN card management section coming soon...</p>
