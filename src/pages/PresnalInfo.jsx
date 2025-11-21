@@ -10,7 +10,9 @@ const PersonalInfo = () => {
     const [isAddingAddress, setIsAddingAddress] = useState(false)
     const [avatarError, setAvatarError] = useState(false)
     const [selectedFile, setSelectedFile] = useState(null)
+    const [avatarPreview, setAvatarPreview] = useState(null)
     const [uploading, setUploading] = useState(false)
+    const [saveSuccess, setSaveSuccess] = useState(false)
 
     const { user, handleCreateAddress, handleGetAddress, addresses, updateProfile, handleDeleteAddress } = useApi();
 
@@ -48,67 +50,91 @@ const PersonalInfo = () => {
                 gender: user.gender || '',
                 email: user.email || '',
                 phone: user.mobilenumber || user.phone || user.phoneNumber || '',
-                profileAvatar: user.profileAvatar,
+                profileAvatar: user.avatar,
             };
 
             setUserData(updatedUserData);
             setFormData(updatedUserData);
+            
+            // Reset avatar preview when user data loads
+            setAvatarPreview(null);
+            setAvatarError(false);
         }
     }, [user]);
 
-    // Get avatar URL with fallback - FIXED VERSION
+    // Get avatar URL with fallback
     const getAvatarUrl = () => {
-        if (user?.profileAvatar && !avatarError) {
+        if (user?.avatar && !avatarError) {
             // Check if it's a full URL or relative path
-            if (user.profileAvatar.startsWith('http')) {
-                return user.profileAvatar;
+            if (user.avatar.startsWith('http')) {
+                return `http://localhost:3000${user.avatar}`;
             } else {
-                // If it's a relative path, construct the full URL
-                // Remove leading slash if present to avoid double slashes
-                const cleanPath = user.profileAvatar.startsWith('/') 
-                    ? user.profileAvatar.substring(1) 
-                    : user.profileAvatar;
-                return `${baseUrl}/${cleanPath}`;
+                // If it's a relative path from backend, construct the full URL
+                return `http://localhost:3000${user.avatar}`;
             }
         }
         return null;
     };
-
-    
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
         if (file) {
             // Validate file type
             if (!file.type.startsWith('image/')) {
-                alert('Please select an image file');
+                alert('Please select a valid image file');
                 return;
             }
 
             // Validate file size (5MB)
-            if (file.size > 5 * 1024 * 1024) {
-                alert('File size should be less than 5MB');
+            if (file.size > 10 * 1024 * 1024) {
+                alert('File size should be less than 10MB');
                 return;
             }
 
             setSelectedFile(file);
+            setAvatarError(false);
+            
+            // Create preview URL
+            const previewUrl = URL.createObjectURL(file);
+            setAvatarPreview(previewUrl);
         }
     };
 
     const handleSave = async () => {
+        // Basic validation
+        if (!formData.firstName.trim() || !formData.lastName.trim()) {
+            alert('Please fill in both first name and last name');
+            return;
+        }
+
+        if (!formData.phone.trim()) {
+            alert('Please provide a mobile number');
+            return;
+        }
+
         try {
             setUploading(true);
+            setSaveSuccess(false);
 
             const formDataToSend = new FormData();
-            formDataToSend.append('firstname', formData.firstName);
-            formDataToSend.append('lastname', formData.lastName);
+            formDataToSend.append('firstname', formData.firstName.trim());
+            formDataToSend.append('lastname', formData.lastName.trim());
             formDataToSend.append('gender', formData.gender);
-            formDataToSend.append('mobilenumber', formData.phone);
+            formDataToSend.append('mobilenumber', formData.phone.trim());
 
-            // If a new avatar file is selected, append it
+            // If a new avatar file is selected, append it with the correct field name "avatar"
             if (selectedFile) {
-                formDataToSend.append('profileAvatar', selectedFile);
+                formDataToSend.append('avatar', selectedFile);
             }
+
+            console.log('Sending form data with:', {
+                firstname: formData.firstName,
+                lastname: formData.lastName,
+                gender: formData.gender,
+                mobilenumber: formData.phone,
+                hasFile: !!selectedFile,
+                fileName: selectedFile?.name
+            });
 
             // Call the updateProfile function with FormData
             const result = await updateProfile(formDataToSend);
@@ -117,21 +143,37 @@ const PersonalInfo = () => {
                 // Update local state with new data
                 const updatedUserData = {
                     ...userData,
-                    firstName: formData.firstName,
-                    lastName: formData.lastName,
+                    firstName: formData.firstName.trim(),
+                    lastName: formData.lastName.trim(),
                     gender: formData.gender,
-                    phone: formData.phone,
-                    profileAvatar: result.user?.profileAvatar || userData.profileAvatar
+                    phone: formData.phone.trim(),
+                    profileAvatar: result.user?.avatar || userData.profileAvatar
                 };
 
                 setUserData(updatedUserData);
+                setFormData(updatedUserData);
+                
+                // Clean up the preview URL
+                if (avatarPreview) {
+                    URL.revokeObjectURL(avatarPreview);
+                }
+                setAvatarPreview(null);
+                setAvatarError(false);
+                setSelectedFile(null);
+                
+                // Only exit editing mode after everything is done
                 setIsEditing(false);
-                setSelectedFile(null); // Reset selected file after save
-                setAvatarError(false); // Reset avatar error on successful update
+                setSaveSuccess(true);
+                
+                console.log('Profile updated successfully');
+                
+                // Show success message temporarily
+                setTimeout(() => setSaveSuccess(false), 3000);
             }
         } catch (error) {
             console.error('Error updating profile:', error);
             alert('Failed to update profile. Please try again.');
+            // Don't exit editing mode on error
         } finally {
             setUploading(false);
         }
@@ -141,6 +183,14 @@ const PersonalInfo = () => {
         setFormData(userData);
         setIsEditing(false);
         setSelectedFile(null);
+        
+        // Clean up the preview URL
+        if (avatarPreview) {
+            URL.revokeObjectURL(avatarPreview);
+        }
+        setAvatarPreview(null);
+        setAvatarError(false);
+        setSaveSuccess(false);
     }
 
     const handleInputChange = (field, value) => {
@@ -158,6 +208,14 @@ const PersonalInfo = () => {
     }
 
     const handleAddAddress = async () => {
+        // Validate address form
+        if (!newAddress.fullName.trim() || !newAddress.phoneNumber.trim() || 
+            !newAddress.address.trim() || !newAddress.pincode.trim() || 
+            !newAddress.city.trim() || !newAddress.state.trim()) {
+            alert('Please fill in all required address fields');
+            return;
+        }
+
         try {
             await handleCreateAddress(newAddress);
             // Refresh addresses list
@@ -196,9 +254,8 @@ const PersonalInfo = () => {
     }
 
     const setDefaultAddress = (id) => {
-        // This would typically call an API to set default address
         console.log('Setting default address:', id);
-        // Implement your set default address logic here
+        // Implement set default address functionality
     }
 
     // Get user's display name
@@ -215,6 +272,15 @@ const PersonalInfo = () => {
         return 'User';
     }
 
+    // Clean up object URLs on component unmount
+    useEffect(() => {
+        return () => {
+            if (avatarPreview) {
+                URL.revokeObjectURL(avatarPreview);
+            }
+        };
+    }, [avatarPreview]);
+
     useEffect(() => {
         handleGetAddress()
     }, [])
@@ -222,6 +288,13 @@ const PersonalInfo = () => {
     return (
         <div className="bg-gray-50 py-8">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+                {/* Success Message */}
+                {saveSuccess && (
+                    <div className="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-md">
+                        Profile updated successfully!
+                    </div>
+                )}
+                
                 <div className="flex flex-col lg:flex-row gap-8">
                     {/* Sidebar */}
                     <div className="lg:w-1/4">
@@ -308,24 +381,25 @@ const PersonalInfo = () => {
                                         {!isEditing ? (
                                             <button
                                                 onClick={() => setIsEditing(true)}
-                                                className="flex items-center space-x-1 text-blue-600 hover:text-blue-700 font-medium text-sm"
+                                                disabled={uploading}
+                                                className="flex items-center space-x-1 text-blue-600 hover:text-blue-700 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
                                                 <BiEdit className="w-4 h-4" />
-                                                <span>Edit</span>
+                                                <span>{uploading ? 'Saving...' : 'Edit'}</span>
                                             </button>
                                         ) : (
                                             <div className="flex space-x-2">
                                                 <button
                                                     onClick={handleSave}
                                                     disabled={uploading}
-                                                    className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
+                                                    className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                 >
                                                     {uploading ? 'Saving...' : 'Save'}
                                                 </button>
                                                 <button
                                                     onClick={handleCancel}
                                                     disabled={uploading}
-                                                    className="px-3 py-1 bg-gray-500 text-white text-sm rounded hover:bg-gray-600 transition-colors disabled:opacity-50"
+                                                    className="px-3 py-1 bg-gray-500 text-white text-sm rounded hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                 >
                                                     Cancel
                                                 </button>
@@ -342,7 +416,16 @@ const PersonalInfo = () => {
                                             <div className="flex items-center space-x-3 mb-4">
                                                 <div className="relative">
                                                     <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center overflow-hidden border-2 border-gray-300">
-                                                        {getAvatarUrl() ? (
+                                                        {/* Show preview if file is selected */}
+                                                        {avatarPreview ? (
+                                                            <img
+                                                                src={avatarPreview}
+                                                                alt="Profile preview"
+                                                                className="w-full h-full object-cover"
+                                                            />
+                                                        ) : 
+                                                        /* Show existing avatar if available */
+                                                        getAvatarUrl() ? (
                                                             <img
                                                                 src={getAvatarUrl()}
                                                                 alt="Profile"
@@ -350,20 +433,24 @@ const PersonalInfo = () => {
                                                                 onError={() => setAvatarError(true)}
                                                             />
                                                         ) : (
+                                                            /* Fallback to icon */
                                                             <BiUser className="w-8 h-8 text-blue-600" />
                                                         )}
                                                     </div>
-                                                    <label htmlFor="avatar-upload" className="absolute bottom-0 right-0 bg-blue-600 text-white p-1 rounded-full cursor-pointer hover:bg-blue-700 transition-colors">
-                                                        <BiCamera className="w-4 h-4" />
-                                                        <input
-                                                            id="avatar-upload"
-                                                            type="file"
-                                                            accept="image/*"
-                                                            onChange={handleFileChange}
-                                                            className="hidden"
-                                                            disabled={uploading || isEditing}
-                                                        />
-                                                    </label>
+                                                    {isEditing && (
+                                                        <label htmlFor="avatar-upload" className={`absolute bottom-0 right-0 bg-blue-600 text-white p-1 rounded-full cursor-pointer hover:bg-blue-700 transition-colors ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                                            <BiCamera className="w-4 h-4" />
+                                                            <input
+                                                                id="avatar-upload"
+                                                                type="file"
+                                                                accept="image/*"
+                                                                onChange={handleFileChange}
+                                                                className="hidden"
+                                                                disabled={uploading}
+                                                                name="avatar"
+                                                            />
+                                                        </label>
+                                                    )}
                                                     {uploading && (
                                                         <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
                                                             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
@@ -375,26 +462,28 @@ const PersonalInfo = () => {
                                                         <div className="flex flex-col md:flex-row gap-4">
                                                             <div>
                                                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                                    First Name
+                                                                    First Name *
                                                                 </label>
                                                                 <input
                                                                     type="text"
                                                                     value={formData.firstName}
                                                                     onChange={(e) => handleInputChange('firstName', e.target.value)}
-                                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
                                                                     disabled={uploading}
+                                                                    placeholder="Enter first name"
                                                                 />
                                                             </div>
                                                             <div>
                                                                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                                    Last Name
+                                                                    Last Name *
                                                                 </label>
                                                                 <input
                                                                     type="text"
                                                                     value={formData.lastName}
                                                                     onChange={(e) => handleInputChange('lastName', e.target.value)}
-                                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
                                                                     disabled={uploading}
+                                                                    placeholder="Enter last name"
                                                                 />
                                                             </div>
                                                         </div>
@@ -423,7 +512,7 @@ const PersonalInfo = () => {
                                                         value="Male"
                                                         checked={formData.gender === 'Male'}
                                                         onChange={(e) => handleInputChange('gender', e.target.value)}
-                                                        className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                                                        className="w-4 h-4 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
                                                         disabled={uploading}
                                                     />
                                                     <span className="text-gray-700">Male</span>
@@ -435,10 +524,22 @@ const PersonalInfo = () => {
                                                         value="Female"
                                                         checked={formData.gender === 'Female'}
                                                         onChange={(e) => handleInputChange('gender', e.target.value)}
-                                                        className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                                                        className="w-4 h-4 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
                                                         disabled={uploading}
                                                     />
                                                     <span className="text-gray-700">Female</span>
+                                                </label>
+                                                <label className="flex items-center space-x-2">
+                                                    <input
+                                                        type="radio"
+                                                        name="gender"
+                                                        value=""
+                                                        checked={!formData.gender || formData.gender === ''}
+                                                        onChange={(e) => handleInputChange('gender', e.target.value)}
+                                                        className="w-4 h-4 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
+                                                        disabled={uploading}
+                                                    />
+                                                    <span className="text-gray-700">Prefer not to say</span>
                                                 </label>
                                             </div>
                                         ) : (
@@ -457,15 +558,16 @@ const PersonalInfo = () => {
                                     {/* Phone Section */}
                                     <div className="border-t border-gray-200 pt-6">
                                         <div className="flex items-center justify-between mb-4">
-                                            <h3 className="text-sm font-semibold text-gray-900">Mobile Number</h3>
+                                            <h3 className="text-sm font-semibold text-gray-900">Mobile Number *</h3>
                                         </div>
                                         {isEditing ? (
                                             <input
                                                 type="tel"
                                                 value={formData.phone}
                                                 onChange={(e) => handleInputChange('phone', e.target.value)}
-                                                className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                                className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
                                                 disabled={uploading}
+                                                placeholder="Enter mobile number"
                                             />
                                         ) : (
                                             <p className="text-gray-700">{userData.phone || 'Not provided'}</p>
@@ -498,7 +600,7 @@ const PersonalInfo = () => {
                                             <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Address</h3>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
                                                     <input
                                                         type="text"
                                                         value={newAddress.fullName}
@@ -508,7 +610,7 @@ const PersonalInfo = () => {
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
                                                     <input
                                                         type="tel"
                                                         value={newAddress.phoneNumber}
@@ -518,7 +620,7 @@ const PersonalInfo = () => {
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Pincode</label>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Pincode *</label>
                                                     <input
                                                         type="text"
                                                         value={newAddress.pincode}
@@ -540,7 +642,7 @@ const PersonalInfo = () => {
                                                     </select>
                                                 </div>
                                                 <div className="md:col-span-2">
-                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Complete Address</label>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Complete Address *</label>
                                                     <textarea
                                                         value={newAddress.address}
                                                         onChange={(e) => handleAddressInputChange('address', e.target.value)}
@@ -550,7 +652,7 @@ const PersonalInfo = () => {
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
                                                     <input
                                                         type="text"
                                                         value={newAddress.city}
@@ -560,7 +662,7 @@ const PersonalInfo = () => {
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">State *</label>
                                                     <input
                                                         type="text"
                                                         value={newAddress.state}

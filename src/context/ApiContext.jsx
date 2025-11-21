@@ -169,7 +169,7 @@ const ApiContext = ({ children }) => {
     const handleFetchProducts = async () => {
         const token = localStorage.getItem("token");
         try {
-            const response = await axios.get(`${baseUrl}/porduct/get-product`, {
+            const response = await axios.get(`${baseUrl}/product/get-product`, {
                 headers: {
                     "Content-Type": "applicaiton/json",
                     "Authorization": `Bearer ${token}`
