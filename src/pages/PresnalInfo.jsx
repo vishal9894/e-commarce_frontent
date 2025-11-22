@@ -101,16 +101,8 @@ const PersonalInfo = () => {
     };
 
     const handleSave = async () => {
-        // Basic validation
-        if (!formData.firstName.trim() || !formData.lastName.trim()) {
-            alert('Please fill in both first name and last name');
-            return;
-        }
-
-        if (!formData.phone.trim()) {
-            alert('Please provide a mobile number');
-            return;
-        }
+       
+      
 
         try {
             setUploading(true);
