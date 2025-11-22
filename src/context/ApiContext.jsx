@@ -11,7 +11,7 @@ const ApiContext = ({ children }) => {
     const [loading, setLoading] = useState(false);
     const [addresses, setAddresses] = useState([]);
     const [activeAddress, setActiveAddress] = useState([])
-    const [phones , setPhones] = useState([]);
+    const [phones, setPhones] = useState([]);
 
     const fetchProfile = async () => {
         try {
@@ -144,7 +144,7 @@ const ApiContext = ({ children }) => {
 
     const handleDeleteAddress = async (paramID) => {
         const token = localStorage.getItem("token");
-        
+
 
         try {
             const response = await axios.delete(`${baseUrl}/user/delete-address/${paramID}`, {
@@ -166,17 +166,17 @@ const ApiContext = ({ children }) => {
 
     // porducts
 
-    const handleFetchProducts = async () => {
+    const handleFetchProducts = async (category) => {
         const token = localStorage.getItem("token");
         try {
-            const response = await axios.get(`${baseUrl}/product/get-product`, {
+            const response = await axios.get(`${baseUrl}/product/get-product/${category}`, {
                 headers: {
                     "Content-Type": "applicaiton/json",
                     "Authorization": `Bearer ${token}`
                 },
                 withCredentials: true
             })
-            console.log(response.data , "fethc porducts");
+            console.log(response.data, "fethc porducts");
             setPhones(response.data.product)
 
         } catch (error) {
@@ -186,15 +186,31 @@ const ApiContext = ({ children }) => {
     }
 
 
+    const handleUpdateWishlist = async ({ id, likedPhones }) => {
+        const token = localStorage.getItem("token");
+        try {
+            const response = await axios.put(`${baseUrl}/product/update-wishlist/${id}`, {
+                wishlist: likedPhones
+            }, {
+                headers: {
+                    "Content-Type": "applicaiton/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                withCredentials: true
 
+            })
+            res.status(200).json({message : "fetch wishlist " , response})
+
+        } catch (error) {
+            console.log(error);
+
+        }
+    }
 
 
     useEffect(() => {
-
         fetchProfile();
         handleActiveAddress();
-        handleFetchProducts();
-
     }, []);
 
     const handleLogout = async () => {
@@ -214,7 +230,8 @@ const ApiContext = ({ children }) => {
         loading,
         addresses, activeAddress,
         handleDeleteAddress,
-        phones
+        phones,
+        handleFetchProducts
     };
 
     return (

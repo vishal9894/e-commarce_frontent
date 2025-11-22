@@ -210,6 +210,16 @@ const HomePage = () => {
           </div>
         </div>
       </div>
+      <form action="http://localhost:3000/api/product/add-product"
+        method="POST"
+        enctype="multipart/form-data" className='my-10'>
+        <input type="text" name="brand" placeholder="Brand" required />
+        <input type="text" name="productName" placeholder="Product Name" required />
+        <input type="number" name="price" placeholder="Price" required />
+        <input type="text" name="category" placeholder="category" required />
+        <input type="file" name="image" accept="image/*" required />
+        <button type="submit">Add Product</button>
+      </form>
     </>
   );
 };
