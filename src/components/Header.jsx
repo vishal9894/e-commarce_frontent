@@ -15,7 +15,7 @@ import { useApi } from '../context/ApiContext'
 
 const Header = () => {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false)
-    const {handleLogout ,activeAddress ,user} = useApi();
+    const { handleLogout, activeAddress, user } = useApi();
     const dropdownRef = useRef(null)
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -31,7 +31,7 @@ const Header = () => {
     }, [])
 
     console.log(activeAddress);
-    
+
     return (
         <header className="bg-gradient-to-r from-blue-50 to-gray-50 shadow-sm border-b border-gray-200">
             {/* Top Bar */}
@@ -133,7 +133,7 @@ const Header = () => {
                                         <span>Setting info</span>
                                     </button>
                                     <div className="border-t border-gray-100 my-1"></div>
-                                    <button onClick={ handleLogout} className="w-full flex items-center space-x-2 px-4 py-3 hover:bg-red-50 transition-colors text-left text-sm text-red-600">
+                                    <button onClick={handleLogout} className="w-full flex items-center space-x-2 px-4 py-3 hover:bg-red-50 transition-colors text-left text-sm text-red-600">
                                         <span>Logout</span>
                                     </button>
                                 </div>
@@ -141,10 +141,13 @@ const Header = () => {
                         </div>
 
                         {/* Wishlist - Text hidden on small screens */}
-                        <div className="flex items-center space-x-1 text-gray-700 hover:text-blue-600 cursor-pointer transition-colors">
-                            <BiHeart className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6" />
-                            <span className="text-xs lg:text-sm font-medium hidden md:block">Wishlist</span>
-                        </div>
+                        <Link to="wish_list">
+                            <div className="flex items-center space-x-1 text-gray-700 hover:text-blue-600 cursor-pointer transition-colors">
+                                <BiHeart className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6" />
+                                <span className="text-xs lg:text-sm font-medium hidden md:block">Wishlist</span>
+                            </div>
+                        </Link>
+
 
                         {/* Cart - Text hidden on small screens */}
                         <div className="flex items-center space-x-1 text-gray-700 hover:text-blue-600 cursor-pointer transition-colors relative">

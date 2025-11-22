@@ -6,6 +6,7 @@ import SignupPage from "./auth/SignupPage";
 import ProtectedRoute from "./context/ProtectedRoute";
 import PersonalInfo from "./pages/PresnalInfo";
 import OrderedProduct from "./pages/OrderdProduct";
+import WishListCard from "./components/WishListCard";
 
 const App = () => {
   return (
@@ -23,6 +24,7 @@ const App = () => {
         <Route path="/home" element={<HomePage />} />
         <Route path="/precnal_info" element={<PersonalInfo />} />
         <Route path="/order_details" element={<OrderedProduct />} />
+        <Route path="/wish_list" element={<WishListCard />} />
       </Route>
 
       {/* Public Routes */}
