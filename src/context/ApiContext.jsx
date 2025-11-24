@@ -186,11 +186,13 @@ const ApiContext = ({ children }) => {
     }
 
 
-    const handleUpdateWishlist = async ({ id, likedPhones }) => {
+    const handleUpdateWishlist = async ( id, newLikedState ) => {
         const token = localStorage.getItem("token");
+        console.log(newLikedState , "chekc on props");
+        
         try {
             const response = await axios.put(`${baseUrl}/product/update-wishlist/${id}`, {
-                wishlist: likedPhones
+                wishlist: newLikedState , 
             }, {
                 headers: {
                     "Content-Type": "applicaiton/json",
@@ -199,7 +201,8 @@ const ApiContext = ({ children }) => {
                 withCredentials: true
 
             })
-            res.status(200).json({message : "fetch wishlist " , response})
+           console.log(response.data);
+           
 
         } catch (error) {
             console.log(error);
@@ -231,7 +234,8 @@ const ApiContext = ({ children }) => {
         addresses, activeAddress,
         handleDeleteAddress,
         phones,
-        handleFetchProducts
+        handleFetchProducts,
+        handleUpdateWishlist
     };
 
     return (

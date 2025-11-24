@@ -101,8 +101,6 @@ const PersonalInfo = () => {
     };
 
     const handleSave = async () => {
-       
-      
 
         try {
             setUploading(true);

@@ -3,28 +3,50 @@ import { FaShoppingCart, FaHeart, FaStar, FaChevronRight } from 'react-icons/fa'
 import { useApi } from '../context/ApiContext';
 
 const PhoneCard = () => {
-    const [likedPhones, setLikedPhones] = useState(false);
+    const [likedPhones, setLikedPhones] = useState({});
     const [showAll, setShowAll] = useState(false);
+    const { phones, handleFetchProducts, handleUpdateWishlist } = useApi();
 
-    const { phones, handleFetchProducts ,handleUpdateWishlist  } = useApi();
-
-    
-    
-
-    const toggleLike = (phoneId) => {
+    // Toggle like for a specific phone
+    const toggleLike = async (phoneId) => {
+        const newLikedState = !likedPhones[phoneId];
+        
+        // Update local state immediately for responsive UI
         setLikedPhones(prev => ({
             ...prev,
-            [phoneId]: !prev[phoneId]
+            [phoneId]: newLikedState
         }));
+
+        // Send API request to update wishlist
+        try {
+            await handleUpdateWishlist(phoneId, newLikedState);
+        } catch (error) {
+            console.error('Failed to update wishlist:', error);
+            // Revert local state if API call fails
+            setLikedPhones(prev => ({
+                ...prev,
+                [phoneId]: !newLikedState
+            }));
+        }
     };
 
     const visiblePhones = showAll ? phones : phones.slice(0, 5);
 
     useEffect(() => {
         handleFetchProducts("MobilePhones");
-        handleUpdateWishlist(likedPhones)
-       
     }, []);
+
+    // Initialize liked states based on phone data (if you have wishlist data)
+    useEffect(() => {
+        if (phones.length > 0) {
+            const initialLikedState = {};
+            phones.forEach(phone => {
+                // Initialize all as false, or set based on your data
+                initialLikedState[phone._id] = false;
+            });
+            setLikedPhones(initialLikedState);
+        }
+    }, [phones]);
 
     return (
         <div className="bg-gray-50 py-8 px-4">
@@ -73,9 +95,9 @@ const PhoneCard = () => {
 
                                     {/* Like Button */}
                                     <button
-                                        onClick={() => toggleLike(phone._id)} 
+                                        onClick={() => toggleLike(phone._id)}
                                         className={`absolute top-2 right-2 p-1.5 rounded-full transition-colors duration-200 ${
-                                            likedPhones[phone._id] /* Changed from phone.id to phone._id */
+                                            likedPhones[phone._id]
                                                 ? "bg-red-500 text-white"
                                                 : "bg-white/90 text-gray-600 hover:bg-white"
                                         }`}
