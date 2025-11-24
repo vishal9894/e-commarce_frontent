@@ -3,10 +3,11 @@ import { BiHeart, BiTrash, BiCart, BiStar, BiCheck, BiShare } from 'react-icons/
 import { useApi } from '../context/ApiContext'
 import { FaHeart } from 'react-icons/fa'
 
-const WishListCard = () => {
-  const { handlegetWishlist, wishlist } = useApi()
+const AddCard = () => {
+  const { cardItems , cardItemsCount } = useApi()
 
  
+
   const handleRemove = (id) => {
     // remove from wishlist api logic here
     console.log("Removed", id)
@@ -18,8 +19,8 @@ const WishListCard = () => {
 
   return (
     <div className="max-w-7xl mx-auto my-12 space-y-6">
-      {wishlist && wishlist.length > 0 ? (
-        wishlist.map((item) => (
+      {cardItems && cardItems.length > 0 ? (
+        cardItems.map((item) => (
           <div key={item._id} className="p-6 border border-gray-300 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300">
             <div className="flex flex-col lg:flex-row gap-6">
 
@@ -92,7 +93,7 @@ const WishListCard = () => {
                     onClick={() => handleAddToCart(item._id)}
                     className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:shadow-lg transition-all"
                   >
-                    <BiCart className="w-5 h-5" /> ADD TO CART
+                    Buy Now
                   </button>
 
                   <button className="w-full border-2 border-gray-300 text-gray-700 py-3 rounded-xl font-semibold flex items-center justify-center gap-2 hover:border-gray-400 transition">
@@ -116,4 +117,4 @@ const WishListCard = () => {
   )
 }
 
-export default WishListCard
+export default AddCard

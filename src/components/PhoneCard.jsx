@@ -10,7 +10,7 @@ const PhoneCard = () => {
     // Toggle like for a specific phone
     const toggleLike = async (phoneId) => {
         const newLikedState = !likedPhones[phoneId];
-        
+
         // Update local state immediately for responsive UI
         setLikedPhones(prev => ({
             ...prev,
@@ -74,7 +74,7 @@ const PhoneCard = () => {
                     {visiblePhones.length > 0 ? (
                         visiblePhones.map((phone) => (
                             <div
-                                key={phone._id} 
+                                key={phone._id}
                                 className="bg-white rounded-xl shadow-md hover:shadow-lg 
                      transition-all duration-300 transform hover:-translate-y-1 overflow-hidden"
                             >
@@ -96,16 +96,17 @@ const PhoneCard = () => {
                                     {/* Like Button */}
                                     <button
                                         onClick={() => toggleLike(phone._id)}
-                                        className={`absolute top-2 right-2 p-1.5 rounded-full transition-colors duration-200 ${
-                                            likedPhones[phone._id]
+                                        className={`absolute top-2 right-2 p-1.5 rounded-full transition-colors duration-200 ${likedPhones[phone._id] || phone.wishlist
                                                 ? "bg-red-500 text-white"
                                                 : "bg-white/90 text-gray-600 hover:bg-white"
-                                        }`}
+                                            }`}
                                     >
-                                        <FaHeart className={`w-3 h-3 ${
-                                            likedPhones[phone._id] ? 'text-white' : 'text-gray-600'
-                                        }`} />
+                                        <FaHeart
+                                            className={`w-3 h-3 ${likedPhones[phone._id] || phone.wishlist ? "text-white" : "text-gray-600"
+                                                }`}
+                                        />
                                     </button>
+
 
                                     {/* Brand */}
                                     <div className="absolute bottom-2 left-2 bg-black/70 text-white px-2 py-1 rounded text-xs">
